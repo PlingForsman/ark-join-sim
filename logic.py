@@ -17,13 +17,13 @@ class JoinSim:
                 with open("points.json", "r") as f:
                     custom_points = json.load(f)[str(self.process.resolution[1])]
 
-                    if not self.validate_points(custom_points):
-                        ctypes.windll.user32.MessageBoxW(
-                            0, 
-                            "Your custom points are not valid. Please edit the points.json file to match your resolution or change to 1080/1440p\n\nOne or more xy points are set to [0, 0]",
-                            "Invalid Points", 
-                            1)
-                        sys.exit()
+                if not self.validate_points(custom_points):
+                    ctypes.windll.user32.MessageBoxW(
+                        0, 
+                        "Your custom points are not valid. Please edit the points.json file to match your resolution or change to 1080/1440p\n\nOne or more xy points are set to [0, 0]",
+                        "Invalid Points", 
+                        1)
+                    sys.exit()
 
             except FileNotFoundError:
                 with open("points.json", "w") as f:
