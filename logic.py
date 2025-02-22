@@ -37,6 +37,8 @@ class JoinSim:
                 sys.exit()
 
     def run(self, server: str) -> None:
+
+        self.process.set_window_foreground()
         
         while self.running:
             pass
