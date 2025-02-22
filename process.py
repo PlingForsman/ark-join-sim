@@ -191,7 +191,6 @@ class ProcessWindow:
         subprocess.run(f"start steam://rungameid/2399830",  shell=True)
         start = time.time()
         self.launched = True
-        print("Process: Launching ArkAscended")
         
         while time.time() - start <= 50:
 
