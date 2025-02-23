@@ -1,11 +1,12 @@
 from process_window import ProcessWindow
-from threading import Thread
+from tools import threaded
 
 import ctypes
 import json
 import sys
 
 class JoinSim:
+    
     def __init__(self, process: ProcessWindow) -> None:
         self.process = process
         self.running = False
@@ -36,9 +37,12 @@ class JoinSim:
                     1)
                 sys.exit()
 
+    @threaded
     def run(self, server: str) -> None:
 
         next_action = self.determine_state()
+        self.setup(next_action, server)
+        print(next_action)
         
         while self.running:
             pass
@@ -57,14 +61,14 @@ class JoinSim:
         if found_points:
             return found_points[-1]
 
-    def setup(self, server: str) -> None:
+    def setup(self, next_action: str, server: str) -> None:
         pass
 
     def start(self, server: str) -> None:
         
         if not self.running:
             self.running = True
-            Thread(target=self.run, args=(server,)).start()
+            self.run(server)
 
     def stop(self) -> None:
         if self.running:
