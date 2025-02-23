@@ -3,6 +3,7 @@ from process_window import ProcessWindow
 from join_sim import JoinSim
 
 class App(tk.Tk):
+    
     def __init__(self) -> None:
         super().__init__()
         self.title("ARK: Ascended Join-sim")

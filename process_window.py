@@ -13,7 +13,6 @@ from tools import threaded, await_condition
 class ProcessWindow:
 
     def __init__(self, title: str, game_id: int | None) -> None:
-
         ctypes.windll.user32.SetProcessDPIAware()
         self.title: str = title
         self.game_id: int | None = game_id
@@ -235,6 +234,3 @@ class ProcessWindow:
 if __name__ == "__main__": 
     window = ProcessWindow("ArkAscended", 2399830)
     print(window.__str__())
-    
-    rgb = window.get_pixel_color((2423,417))
-    print(rgb)
