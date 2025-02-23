@@ -38,7 +38,6 @@ class JoinSim:
 
     def run(self, server: str) -> None:
 
-        self.process.set_window_foreground()
         next_action = self.determine_state()
         
         while self.running:
@@ -70,12 +69,14 @@ class JoinSim:
     def stop(self) -> None:
         if self.running:
             self.running = False
-            self.thread = None
 
     def validate_points(self, points: dict) -> bool:
         
         for key in points:
-            if points[key]["xy"] == [0, 0]: # Might wanna check if point is out of bounds here
+
+            x, y = points[key]["xy"]
+
+            if x <= 0 or y <= 0 or x > self.process.resolution[0] or y > self.process.resolution[1]:            
                 return False
             
         return True
