@@ -39,12 +39,24 @@ class JoinSim:
     def run(self, server: str) -> None:
 
         self.process.set_window_foreground()
+        next_action = self.determine_state()
         
         while self.running:
             pass
 
-    def determine_state(self) -> None:
-        pass
+    def determine_state(self) -> str | None:
+
+        found_points: list = []
+
+        for point in points[self.process.resolution[1]]:
+            x, y = points[self.process.resolution[1]][point]["xy"]
+            rgb = points[self.process.resolution[1]][point]["rgb"]
+
+            if self.process.await_pixel((x, y), rgb, 5, timeout=0.5):
+                found_points.append(point)
+
+        if found_points:
+            return found_points[-1]
 
     def setup(self, server: str) -> None:
         pass
@@ -73,7 +85,6 @@ points = {
     1080: {
         "home": {"xy": [0, 0], "rgb": [0, 0, 0]},
         "select": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "list": {"xy": [0, 0], "rgb": [0, 0, 0]},
         "search": {"xy": [0, 0], "rgb": [0, 0, 0]},
         "result": {"xy": [0, 0], "rgb": [0, 0, 0]},
         "join": {"xy": [0, 0], "rgb": [0, 0, 0]},
@@ -82,14 +93,13 @@ points = {
         "back": {"xy": [0, 0], "rgb": [0, 0, 0]},
     },
     1440: {
-        "home": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "select": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "list": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "search": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "result": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "join": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "join_confirm": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "failed": {"xy": [0, 0], "rgb": [0, 0, 0]},
-        "back": {"xy": [0, 0], "rgb": [0, 0, 0]},
+        "home": {"xy": [1250, 1170], "rgb": [0, 0, 0]},
+        "select": {"xy": [630, 1029], "rgb": [125, 254, 246]},
+        "search": {"xy": [2423,417], "rgb": [4, 34, 51]},
+        "result": {"xy": [144, 437], "rgb": [218, 218, 149]},
+        "join": {"xy": [2255, 1262], "rgb": [254, 254, 254]},
+        "join_confirm": {"xy": [790, 1246], "rgb": [134, 79, 23]},
+        "failed": {"xy": [1504, 974], "rgb": [2, 50, 79]},
+        "back": {"xy": [246, 1176], "rgb": [146, 224, 236]},
     }
 }
