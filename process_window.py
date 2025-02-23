@@ -119,11 +119,17 @@ class ProcessWindow:
     def await_template(self, template: str, confidence: float, timeout: float) -> bool:
         
         return await_condition(lambda: self.locate_template(template, confidence), timeout)
-            
-    def match_pixel(self, xy: tuple[int, int], rgb: tuple[int, int, int], variance: int) -> bool:
+    
+    def get_pixel_color(self, xy: tuple[int, int]) -> tuple[int, int, int]:
 
         img: cv.Mat = cv.cvtColor(self.screenshot(), cv.COLOR_BGR2RGB)
         pixel_rgb: cv.Mat = img[xy[1], xy[0]]
+
+        return pixel_rgb
+            
+    def match_pixel(self, xy: tuple[int, int], rgb: tuple[int, int, int], variance: int) -> bool:
+
+        pixel_rgb = self.get_pixel_color(xy)
                 
         return all(abs(pixel_rgb[i] - rgb[i]) <= variance for i in range(3))
     
@@ -227,5 +233,8 @@ class ProcessWindow:
 
         
 if __name__ == "__main__": 
-    window = ProcessWindow("ArkAsceded", 2399830)
-    print(window.__repr__())
+    window = ProcessWindow("ArkAscended", 2399830)
+    print(window.__str__())
+    
+    rgb = window.get_pixel_color((2423,417))
+    print(rgb)
