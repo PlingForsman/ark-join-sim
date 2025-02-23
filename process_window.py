@@ -7,22 +7,24 @@ import time
 import subprocess
 
 from typing import Literal
-from tools import threaded, State
+from tools import threaded, await_condition
 
 
 class ProcessWindow:
 
-    def __init__(self) -> None:
-        ctypes.windll.user32.SetProcessDPIAware()
+    def __init__(self, title: str, game_id: int | None) -> None:
 
+        ctypes.windll.user32.SetProcessDPIAware()
+        self.title: str = title
+        self.game_id: int | None = game_id
         self.launched: bool = False
         self.hwnd: int = 0
-        self.find_window("UnrealWindow", "ArkAscended")
+        self.find_window(self.title)
         self.resolution: tuple[int, int] = self.get_resolution()
         self.template_path: str = f"{Path(__file__).parent}/templates"
         ocr.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return (
             f"HWND: {self.hwnd}",
             f"Resolution: {self.resolution[0]}x{self.resolution[1]}",
@@ -30,15 +32,19 @@ class ProcessWindow:
             f"OCR Path: {ocr.tesseract_cmd}"
         )
     
-    def find_window(self, PyResourceId: str | None, window_title: str) -> int:
+    def find_window(self, title: str) -> int:
 
-        hwnd = win32gui.FindWindow(PyResourceId, window_title)
+        hwnd = win32gui.FindWindow(None, title)
 
         if hwnd == 0 and not self.launched:
-            self.launch_game()
+            if not self.game_id:
+                raise ValueError(f"Cannot find window '{title}' no game_id was provided")
+        
+            else:
+                self.launch_game()
 
         elif hwnd == 0 and self.launched:
-            raise ValueError(f"Window '{window_title}' was not found")
+            raise ValueError(f"Window '{title}' was not found")
         
         elif hwnd != 0:
             self.launched = True
@@ -60,7 +66,7 @@ class ProcessWindow:
 
         for crash in crash_str:
             try:
-                if self.find_window(None, crash): # Crash has been detected
+                if self.find_window(crash): # Crash has been detected
                     self.launched = False
                     return True 
 
@@ -96,7 +102,7 @@ class ProcessWindow:
             screenshot = screenshot.reshape((bmp_info['bmHeight'], bmp_info['bmWidth'], 4))
             return cv.cvtColor(screenshot, cv.COLOR_BGRA2BGR)
 
-    def locate_template(self, template: str, confidence: float) -> tuple[int, int]:
+    def locate_template(self, template: str, confidence: float) -> tuple[int, int] | None:
         
         template: cv.Mat = cv.imread(f"{self.template_path}/{template}", cv.IMREAD_GRAYSCALE)
         image: cv.Mat = cv.cvtColor(self.screenshot(), cv.COLOR_BGR2GRAY)
@@ -112,14 +118,7 @@ class ProcessWindow:
 
     def await_template(self, template: str, confidence: float, timeout: float) -> bool:
         
-        start = time.time()
-
-        while time.time() - start <= timeout:
-
-            if self.locate_template(template, confidence):
-                return True
-
-        return False
+        return await_condition(lambda: self.locate_template(template, confidence), timeout)
             
     def match_pixel(self, xy: tuple[int, int], rgb: tuple[int, int, int], variance: int) -> bool:
 
@@ -127,6 +126,10 @@ class ProcessWindow:
         pixel_rgb: cv.Mat = img[xy[1], xy[0]]
                 
         return all(abs(pixel_rgb[i] - rgb[i]) <= variance for i in range(3))
+    
+    def await_pixel(self, xy: tuple[int, int], rgb: tuple[int, int, int], variance: int, timeout: float) -> bool:
+
+        return await_condition(lambda: self.match_pixel(xy, rgb, variance), timeout)
     
     def crop(self, screenshot: cv.Mat, region: tuple[int, int, int, int]) -> cv.Mat:
 
@@ -141,17 +144,6 @@ class ProcessWindow:
     def post_char(self, char: int) -> None:
 
         ctypes.windll.user32.PostMessageW(self.hwnd, win32con.WM_CHAR, char, 0)
-
-    def await_pixel_match(self, xy: tuple[int, int], rgb: tuple[int, int, int], variance: int, timeout: float) -> bool:
-
-        start = time.time()
-
-        while time.time() - start <= timeout:
-
-            if self.match_pixel(xy, rgb, variance):
-                return True
-            
-        return False
 
     @threaded
     def hold(self, key: int, duration: float) -> None:
@@ -188,27 +180,33 @@ class ProcessWindow:
     
     def launch_game(self) -> None:
 
-        subprocess.run(f"start steam://rungameid/2399830",  shell=True)
+        if not self.game_id:
+            raise ValueError(f"Cannot launch {self.title} no game_id was provided")
+
+        subprocess.run(f"start steam://rungameid/{self.game_id}",  shell=True)
         start = time.time()
         self.launched = True
         
         while time.time() - start <= 50:
 
             try:
-                self.find_window("UnrealWindow", "ArkAscended")
+                self.find_window(self.title)
                 return 
 
             except ValueError:
                 time.sleep(1)
 
-        raise ValueError("Window 'ArkAscended' was not found within 50 seconds after being started")
+        raise ValueError(f"Window '{self.title}' was not found within 50 seconds after being started")
     
-    def str_to_key(self, string: str) -> int | list[int]:
+    def hotkey_to_key(self, string: str) -> int:
+        pass
+    
+    def str_to_key(self, string: str) -> list[int]:
 
         if len(string) == 1:
             result = win32api.VkKeyScan(string)
             vk_code = result & 0xFF
-            return vk_code
+            return [vk_code]
         
         else:
             vk_codes: list = []
@@ -229,5 +227,5 @@ class ProcessWindow:
 
         
 if __name__ == "__main__": 
-    window = ProcessWindow()
+    window = ProcessWindow("ArkAsceded", 2399830)
     print(window.__repr__())

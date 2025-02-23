@@ -1,4 +1,4 @@
-from process import ProcessWindow
+from process_window import ProcessWindow
 from threading import Thread
 
 import ctypes
