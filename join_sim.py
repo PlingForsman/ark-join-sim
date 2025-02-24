@@ -21,9 +21,10 @@ class JoinSim:
                 if not self.validate_points(custom_points):
                     ctypes.windll.user32.MessageBoxW(
                         0, 
-                        "Your custom points are not valid. Please edit the points.json file to match your resolution or change to 1080/1440p\n\nOne or more xy points are set to [0, 0]",
+                        "Your custom points are not valid. Please edit the points.json file to match your resolution or change to 1080/1440p\n\nOne or more xy points are set to [0, 0] or exceed the resolution of your monitor",
                         "Invalid Points", 
-                        1)
+                        1
+                    )
                     sys.exit()
 
             except FileNotFoundError:
@@ -34,7 +35,17 @@ class JoinSim:
                     0, 
                     f"Your resolution is not supported ({self.process.resolution[0]}x{self.process.resolution[1]}). A default template has been created for you. Please edit the points.json file to match your resolution or change to 1080/1440p",
                     "Resolution Error", 
-                    1)
+                    1
+                )
+                sys.exit()
+
+            except KeyError:
+                ctypes.windll.user32.MessageBoxW(
+                    0, 
+                    f"Your resolution is not supported ({self.process.resolution[0]}x{self.process.resolution[1]}). Please edit the points.json file to match your resolution or change to 1080/1440p",
+                    "Resolution Error", 
+                    1
+                )
                 sys.exit()
 
     @threaded

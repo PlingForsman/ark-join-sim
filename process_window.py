@@ -20,6 +20,7 @@ class ProcessWindow:
         self.hwnd: int = 0
         self.find_window(self.title)
         self.resolution: tuple[int, int] = self.get_resolution()
+        self.display_mode: Literal["windowed", "fullscreen"] = self.get_display_mode()
         self.template_path: str = f"{Path(__file__).parent}/templates"
         ocr.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
 
@@ -37,7 +38,7 @@ class ProcessWindow:
 
         if hwnd == 0 and not self.launched:
             if not self.game_id:
-                raise ValueError(f"Cannot find window '{title}' no game_id was provided")
+                raise ValueError(f"Cannot find window '{title}'. No game_id was provided")
         
             else:
                 self.launch_game()
@@ -55,6 +56,16 @@ class ProcessWindow:
 
         return (right - left, bot - top)
     
+    def get_display_mode(self) -> Literal["fullscreen", "windowed"]:
+
+        style = win32gui.GetWindowLong(self.hwnd, win32con.GWL_STYLE)
+
+        if style & win32con.WS_OVERLAPPEDWINDOW:
+            return "windowed"
+        
+        else: 
+            return "fullscreen"
+
     def set_window_foreground(self) -> None:
 
         win32gui.SetForegroundWindow(self.hwnd)
@@ -99,6 +110,10 @@ class ProcessWindow:
         if result == 1:
             screenshot = np.frombuffer(bmp_data, dtype=np.uint8)
             screenshot = screenshot.reshape((bmp_info['bmHeight'], bmp_info['bmWidth'], 4))
+
+            if self.display_mode == "windowed":
+                screenshot = self.crop(screenshot, (9, 38, (self.resolution[0] - 9), (self.resolution[1] - 9))) # Removing the window border thats added for some fucking reason
+
             return cv.cvtColor(screenshot, cv.COLOR_BGRA2BGR)
 
     def locate_template(self, template: str, confidence: float) -> tuple[int, int] | None:
@@ -138,7 +153,8 @@ class ProcessWindow:
     
     def crop(self, screenshot: cv.Mat, region: tuple[int, int, int, int]) -> cv.Mat:
 
-        return screenshot[region[0]:region[1], region[2]:region[3]]
+        x1, y1, x2, y2 = region
+        return screenshot[y1:y2, x1:x2]
 
     def press(self, key: int, duration: float = 0.05) -> None:
 
@@ -234,3 +250,10 @@ class ProcessWindow:
 if __name__ == "__main__": 
     window = ProcessWindow("ArkAscended", 2399830)
     print(window.__str__())
+
+    s = window.screenshot()
+    cv.imwrite("screenshot.png", s)
+
+    template = cv.imread("screenshot.png", cv.IMREAD_UNCHANGED)
+    print(f"{template.shape[0]}x{template.shape[1]}")
+    print(window.display_mode)
