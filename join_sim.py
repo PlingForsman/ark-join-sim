@@ -4,12 +4,14 @@ from tools import threaded
 import ctypes
 import json
 import sys
+import time
 
 class JoinSim:
     
     def __init__(self, process: ProcessWindow) -> None:
         self.process = process
         self.running = False
+        self.ensure_compatablility()
 
     def ensure_compatablility(self) -> None:
 
@@ -51,12 +53,13 @@ class JoinSim:
     @threaded
     def run(self, server: str) -> None:
 
-        next_action = self.determine_state()
-        self.setup(next_action, server)
-        print(next_action)
+        self.setup()
         
         while self.running:
-            pass
+            for point in points[self.process.resolution[1]]:
+                self.click_point(point)
+                if point == "search":
+                    self.process.write(server)
 
     def determine_state(self) -> str | None:
 
@@ -66,14 +69,21 @@ class JoinSim:
             x, y = points[self.process.resolution[1]][point]["xy"]
             rgb = points[self.process.resolution[1]][point]["rgb"]
 
-            if self.process.await_pixel((x, y), rgb, 5, timeout=0.5):
+            if self.process.await_pixel((x, y), rgb, 2, timeout=0.1):
                 found_points.append(point)
 
         if found_points:
             return found_points[-1]
 
-    def setup(self, next_action: str, server: str) -> None:
-        pass
+    def setup(self) -> None:
+        
+        next = self.determine_state()
+
+        if next == "home":
+            self.click_point("home")
+        
+        elif next == "select":
+            return
 
     def start(self, server: str) -> None:
         
@@ -95,6 +105,16 @@ class JoinSim:
                 return False
             
         return True
+    
+    def click_point(self, point: str) -> None:
+
+        x, y = points[self.process.resolution[1]][point]["xy"]
+        rgb = points[self.process.resolution[1]][point]["rgb"]
+
+        if self.process.await_pixel((x, y), rgb, 2, timeout=0.1):
+            self.process.set_window_foreground()
+            time.sleep(0.05)
+            self.process.click(x, y)
 
 
 points = {
@@ -109,11 +129,11 @@ points = {
         "back": {"xy": [0, 0], "rgb": [0, 0, 0]},
     },
     1440: {
-        "home": {"xy": [1250, 1170], "rgb": [0, 0, 0]},
-        "select": {"xy": [630, 1029], "rgb": [125, 254, 246]},
-        "search": {"xy": [2423,417], "rgb": [4, 34, 51]},
-        "result": {"xy": [144, 437], "rgb": [218, 218, 149]},
-        "join": {"xy": [2255, 1262], "rgb": [254, 254, 254]},
+        "home": {"xy": [1250, 1170], "rgb": [0, 0, 0]}, #good
+        "select": {"xy": [630, 1029], "rgb": [125, 254, 246]}, #good 
+        "search": {"xy": [2423,417], "rgb": [4, 34, 51]}, #good 
+        "result": {"xy": [144, 437], "rgb": [218, 218, 149]}, #good
+        "join": {"xy": [2255, 1262], "rgb": [254, 254, 254]}, #good
         "join_confirm": {"xy": [790, 1246], "rgb": [134, 79, 23]},
         "failed": {"xy": [1504, 974], "rgb": [2, 50, 79]},
         "back": {"xy": [246, 1176], "rgb": [146, 224, 236]},

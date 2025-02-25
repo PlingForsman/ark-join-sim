@@ -12,7 +12,6 @@ class App(tk.Tk):
         self.resizable(False, False)
         self.process = ProcessWindow("ArkAscended", 2399830)
         self.join_sim = JoinSim(self.process)
-        self.join_sim.ensure_compatablility()
         self.is_on = False
         
         self.entry_label = tk.Label(self, text="Server Number:", font=("Arial", 12), bg="#d9d9d9")
@@ -24,7 +23,7 @@ class App(tk.Tk):
         self.start_button = tk.Button(self, text="OFF", font=("Arial", 12, "bold"), bg="#0275d8", fg="white", command=self.on_toggle, width=10, height=1)
         self.start_button.pack(pady=10)
         
-        self.resolution_label = tk.Label(self, text=f"{self.process.resolution[0]}x{self.process.resolution[1]}", font=("Arial", 8), bg="#d9d9d9", fg="black")
+        self.resolution_label = tk.Label(self, text=f"{self.process.resolution[0]}x{self.process.resolution[1]}", font=("Arial", 10), bg="#d9d9d9", fg="black")
         self.resolution_label.pack(pady=10)
     
     def on_toggle(self):

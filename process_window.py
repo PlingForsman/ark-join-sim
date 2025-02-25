@@ -19,7 +19,7 @@ class ProcessWindow:
         self.launched: bool = False
         self.hwnd: int = 0
         self.find_window(self.title)
-        self.resolution: tuple[int, int] = self.get_resolution()
+        self.resolution: tuple[int, int] = self.get_resolution("client")
         self.display_mode: Literal["windowed", "fullscreen"] = self.get_display_mode()
         self.template_path: str = f"{Path(__file__).parent}/templates"
         ocr.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
@@ -50,9 +50,13 @@ class ProcessWindow:
             self.launched = True
             self.hwnd = hwnd
 
-    def get_resolution(self) -> tuple[int, int]:
+    def get_resolution(self, method: Literal["client", "window"]) -> tuple[int, int]:
 
-        left, top, right, bot = win32gui.GetWindowRect(self.hwnd)
+        if method == "client":
+            left, top, right, bot = win32gui.GetClientRect(self.hwnd)
+
+        elif method == "window":
+            left, top, right, bot = win32gui.GetWindowRect(self.hwnd)
 
         return (right - left, bot - top)
     
@@ -89,12 +93,14 @@ class ProcessWindow:
 
         # I dont recommend touching this shit
 
+        width, height = self.get_resolution("window")
+
         hwnd_dc = win32gui.GetWindowDC(self.hwnd)
         mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
         save_dc = mfc_dc.CreateCompatibleDC()
         
         save_bit_map = win32ui.CreateBitmap()
-        save_bit_map.CreateCompatibleBitmap(mfc_dc, self.resolution[0], self.resolution[1])
+        save_bit_map.CreateCompatibleBitmap(mfc_dc, width, height)
         save_dc.SelectObject(save_bit_map)
         
         result = ctypes.windll.user32.PrintWindow(self.hwnd, save_dc.GetSafeHdc(), 2)
@@ -112,7 +118,7 @@ class ProcessWindow:
             screenshot = screenshot.reshape((bmp_info['bmHeight'], bmp_info['bmWidth'], 4))
 
             if self.display_mode == "windowed":
-                screenshot = self.crop(screenshot, (9, 38, (self.resolution[0] - 9), (self.resolution[1] - 9))) # Removing the window border thats added for some fucking reason
+                screenshot = self.crop(screenshot, (9, 38, (width - 9), (height - 9))) # Removing the window border thats added for some fucking reason
 
             return cv.cvtColor(screenshot, cv.COLOR_BGRA2BGR)
 
@@ -171,23 +177,10 @@ class ProcessWindow:
 
         self.press(key, duration)
 
-    def click(self, button: Literal["left", "right"] = "left", xy: tuple[int, int] = None, clicks: int = 1, interval: float = 0) -> None:
+    def click(self, x: int, y: int) -> None:
 
-        for i in range(clicks):
-            ctypes.windll.user32.PostMessageW(
-                self.hwnd, 
-                win32con.WM_LBUTTONDOWN if button == "left" else win32con.WM_RBUTTONDOWN, 
-                win32con.MK_LBUTTON if button == "left" else win32con.MK_RBUTTON, 
-                xy[1] << 16 | xy[0] if xy else 0
-            )
-            time.sleep(0.05)
-            ctypes.windll.user32.PostMessageW(
-                self.hwnd, 
-                win32con.WM_LBUTTONUP if button == "left" else win32con.WM_RBUTTONUP, 
-                win32con.MK_LBUTTON if button == "left" else win32con.MK_RBUTTON,  
-                xy[1] << 16 | xy[0] if xy else 0
-            )
-            time.sleep(interval)
+        ctypes.windll.user32.PostMessageW(self.hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, y << 16 | x)
+        ctypes.windll.user32.PostMessageW(self.hwnd, win32con.WM_LBUTTONUP, 0,  y << 16 | x)
 
     def read_text(self, region: tuple[int, int, int, int], config: str | None) -> str:  
 
@@ -212,6 +205,7 @@ class ProcessWindow:
 
             try:
                 self.find_window(self.title)
+                time.sleep(5)
                 return 
 
             except ValueError:
@@ -255,5 +249,5 @@ if __name__ == "__main__":
     cv.imwrite("screenshot.png", s)
 
     template = cv.imread("screenshot.png", cv.IMREAD_UNCHANGED)
-    print(f"{template.shape[0]}x{template.shape[1]}")
+    print(f"{template.shape[1]}x{template.shape[0]}")
     print(window.display_mode)
