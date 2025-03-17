@@ -23,7 +23,7 @@ class App(tk.Tk):
         self.start_button = tk.Button(self, text="OFF", font=("Arial", 12, "bold"), bg="#0275d8", fg="white", command=self.on_toggle, width=10, height=1)
         self.start_button.pack(pady=10)
         
-        self.resolution_label = tk.Label(self, text=f"{self.process.resolution[0]}x{self.process.resolution[1]}", font=("Arial", 10), bg="#d9d9d9", fg="black")
+        self.resolution_label = tk.Label(self, text=f"{self.process.client_res[0]}x{self.process.client_res[1]} | {self.process.display_mode}", font=("Arial", 10), bg="#d9d9d9", fg="black")
         self.resolution_label.pack(pady=10)
     
     def on_toggle(self):

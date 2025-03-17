@@ -5,21 +5,22 @@ import numpy as np
 from pytesseract import pytesseract as ocr
 import time
 import subprocess
-
 from typing import Literal
+
 from tools import threaded, await_condition
 
 
 class ProcessWindow:
 
     def __init__(self, title: str, game_id: int | None) -> None:
+
         ctypes.windll.user32.SetProcessDPIAware()
-        self.title: str = title
+        self.hwnd: int = self.find_window(title)
+        self.title: str = win32gui.GetWindowText(self.hwnd)
         self.game_id: int | None = game_id
         self.launched: bool = False
-        self.hwnd: int = 0
-        self.find_window(self.title)
-        self.resolution: tuple[int, int] = self.get_resolution("client")
+        self.client_res: tuple[int, int] = self.get_resolution("client")
+        self.window_res: tuple[int, int] = self.get_resolution("window")
         self.display_mode: Literal["windowed", "fullscreen"] = self.get_display_mode()
         self.template_path: str = f"{Path(__file__).parent}/templates"
         ocr.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
@@ -27,28 +28,24 @@ class ProcessWindow:
     def __str__(self) -> str:
         return (
             f"HWND: {self.hwnd}",
-            f"Resolution: {self.resolution[0]}x{self.resolution[1]}",
+            f"Title: {self.title}",
+            f"Game ID: {self.game_id}",
+            f"Game launched: {self.launched}",
+            f"Window resolution: {self.window_res[0]}x{self.window_res[1]}",
+            f"Client resolution: {self.client_res[0]}x{self.client_res[1]}",
+            f"Display Mode: {self.display_mode}",
             f"Template Path: {self.template_path}",
             f"OCR Path: {ocr.tesseract_cmd}"
         )
     
-    def find_window(self, title: str) -> int:
+    def find_window(self, title: str) -> None | int:
 
         hwnd = win32gui.FindWindow(None, title)
 
-        if hwnd == 0 and not self.launched:
-            if not self.game_id:
-                raise ValueError(f"Cannot find window '{title}'. No game_id was provided")
+        if hwnd == 0:
+            return None
         
-            else:
-                self.launch_game()
-
-        elif hwnd == 0 and self.launched:
-            raise ValueError(f"Window '{title}' was not found")
-        
-        elif hwnd != 0:
-            self.launched = True
-            self.hwnd = hwnd
+        return hwnd
 
     def get_resolution(self, method: Literal["client", "window"]) -> tuple[int, int]:
 
@@ -64,11 +61,11 @@ class ProcessWindow:
 
         style = win32gui.GetWindowLong(self.hwnd, win32con.GWL_STYLE)
 
-        if style & win32con.WS_OVERLAPPEDWINDOW:
-            return "windowed"
+        if style & win32con.WS_OVERLAPPEDWINDOW: # Windows says its a bordered window
+            if self.client_res != self.window_res: # if window & client are the same we do not want to change behaviour
+                return "windowed"
         
-        else: 
-            return "fullscreen"
+        return "fullscreen"
 
     def set_window_foreground(self) -> None:
 
@@ -93,7 +90,7 @@ class ProcessWindow:
 
         # I dont recommend touching this shit
 
-        width, height = self.get_resolution("window")
+        width, height = self.window_res
 
         hwnd_dc = win32gui.GetWindowDC(self.hwnd)
         mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
@@ -195,46 +192,35 @@ class ProcessWindow:
     def launch_game(self) -> None:
 
         if not self.game_id:
-            raise ValueError(f"Cannot launch {self.title} no game_id was provided")
+            raise ValueError(f"Cannot launch '{self.title}' no game_id was provided")
 
         subprocess.run(f"start steam://rungameid/{self.game_id}",  shell=True)
-        start = time.time()
         self.launched = True
         
-        while time.time() - start <= 50:
-
-            try:
-                self.find_window(self.title)
-                time.sleep(5)
-                return 
-
-            except ValueError:
-                time.sleep(1)
-
-        raise ValueError(f"Window '{self.title}' was not found within 50 seconds after being started")
-    
-    def hotkey_to_key(self, string: str) -> int:
-        pass
-    
-    def str_to_key(self, string: str) -> list[int]:
-
-        if len(string) == 1:
-            result = win32api.VkKeyScan(string)
-            vk_code = result & 0xFF
-            return [vk_code]
+        if not await_condition(lambda: self.find_window(self.title), 50):
+            raise ValueError(f"Window '{self.title}' was not found within 50 seconds after being started")
         
-        else:
-            vk_codes: list = []
-            for char in string:
-                result = win32api.VkKeyScan(char)
-                vk_code = result & 0xFF
-                vk_codes.append(vk_code)
+        self.hwnd = self.find_window(self.title)
+    
+    def hotkey_to_key(self, hotkey: str) -> int | None:
 
-            return vk_codes
+        result = getattr(win32con, f"VK_{hotkey.upper()}", None)
+        
+        return result & 0xff
+            
+    def str_to_key(self, string: str) -> list[int]:
+        
+        vk_codes: list[int] = []
+        for char in string:
+            result = win32api.VkKeyScan(char)
+            vk_code = result & 0xFF
+            vk_codes.append(vk_code)
+
+        return vk_codes
         
     def write(self, string: str, interval: float = 0) -> None:
 
-        key_int = self.str_to_key(string)
+        key_int: list[int] = self.str_to_key(string)
 
         for char in key_int:
             self.post_char(char)
@@ -242,12 +228,6 @@ class ProcessWindow:
 
         
 if __name__ == "__main__": 
-    window = ProcessWindow("ArkAscended", 2399830)
-    print(window.__str__())
-
-    s = window.screenshot()
-    cv.imwrite("screenshot.png", s)
-
-    template = cv.imread("screenshot.png", cv.IMREAD_UNCHANGED)
-    print(f"{template.shape[1]}x{template.shape[0]}")
-    print(window.display_mode)
+    window = ProcessWindow("This PC", None)
+    [print(i) for i in window.__str__()]
+    window.launch_game()
